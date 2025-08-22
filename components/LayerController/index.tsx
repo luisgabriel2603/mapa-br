@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Trash2, VectorSquareIcon } from "lucide-react";
+import { ChevronDown, Trash2, Upload, VectorSquareIcon } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ExtendedFeatureCollectionWithFilename } from "@/app/page";
 import { Button } from "../ui/button";
@@ -33,7 +33,7 @@ const GeometryController = ({
             <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-3 border-b border-gray-100/50">
                 <Collapsible defaultOpen className="group/collapsible">
                     <CollapsibleTrigger asChild>
-                        <div className="flex items-center justify-between cursor-pointer group">
+                        <div className="flex items-center justify-between  group">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-green-500/10 rounded-xl">
                                     <VectorSquareIcon className="h-5 w-5 text-green-600" />
@@ -53,7 +53,7 @@ const GeometryController = ({
                             {geometries.map((geometry, index) => (
                                 <div
                                     key={(index)}
-                                    className="group/item flex items-center justify-between p-4 bg-white/60 hover:bg-white/80 rounded-2xl border border-gray-100/50 hover:border-gray-200/50 transition-all duration-200 hover:shadow-lg hover:shadow-black/5 cursor-pointer"
+                                    className="group/item flex items-center justify-between p-4 bg-white/60 hover:bg-white/80 rounded-2xl border border-gray-100/50 hover:border-gray-200/50 transition-all duration-200 hover:shadow-lg hover:shadow-black/5 "
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-sm"></div>
@@ -71,6 +71,24 @@ const GeometryController = ({
                                     </Button>
                                 </div>
                             ))}
+                            {geometries.length === 0 && (
+                                <div className="mt-4 p-6 border-2 border-dashed border-green-200/60 hover:border-green-300/80 rounded-2xl bg-gradient-to-br from-green-50/30 to-indigo-50/20 hover:from-green-50/50 hover:to-indigo-50/40 transition-all duration-300  group/drop">
+                                    <div className="flex flex-col items-center gap-3 text-center">
+                                        <div className="p-3 bg-green-100/60 group-hover/drop:bg-green-100/80 rounded-2xl transition-colors duration-300">
+                                            <Upload className="h-6 w-6 text-green-600 group-hover/drop:scale-110 transition-transform duration-300" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold text-green-900/90 group-hover/drop:text-green-900">
+                                                Arraste arquivos aqui
+                                            </p>
+                                            <p className="text-xs text-green-700/70 group-hover/drop:text-green-700/90 transition-colors">
+                                                Formatos: GeoJSON, KML, SHP...
+                                            </p>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="mt-4 pt-4 border-t border-gray-100/50">
                             <p className="text-xs text-gray-500 text-center font-medium">
