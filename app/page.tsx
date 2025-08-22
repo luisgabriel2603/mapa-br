@@ -1,103 +1,188 @@
-import Image from "next/image";
+"use client";
+
+import JSZip from "jszip";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import shp, { type FeatureCollectionWithFilename } from "shpjs";
+import { AppSidebar } from "@/components/AppSidebar";
+import CallDynamicMap from "@/components/CallDynamicMap";
+import GeometryController from "@/components/LayerController";
+import LoadingFile from "@/components/LoadingFile";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { toast } from "@/components/ui/use-toast";
+import { useLayerType } from "@/hooks/layer-type-map";
+import { base_layers, default_wms_layers, type IWMSLayer } from "@/lib/layers";
+import { parseKmlToGeoJson, parseKmlToXmlDocument } from "@/lib/process_file";
+
+export type ShpJSBuffer = ArrayBuffer;
+export interface ExtendedFeatureCollectionWithFilename
+  extends FeatureCollectionWithFilename {
+  fileName?: string;
+  kml?: boolean;
+  kmlText?: string;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { layerType } = useLayerType();
+  const activeLayer = useMemo(() => base_layers[layerType], [layerType]);
+  const [wmsLayerManager, setWmsLayerManager] =
+    useState<IWMSLayer[]>(default_wms_layers);
+  const [loadingFile, setLoadingFile] = useState(false);
+  const [geometries, setGeometries] = useState<
+    ExtendedFeatureCollectionWithFilename[]
+  >([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+
+  const processZipFile = useCallback(
+    async (
+      zipFile: JSZip,
+      zip: JSZip,
+      processSingleFile: typeof _processSingleFile,
+    ): Promise<boolean> => {
+      let needFetchFile = false;
+      for (const relativePath in zipFile.files) {
+        const zipEntry = zipFile.files[relativePath];
+        if (!zipEntry.dir) {
+          const result = await processSingleFile(zipEntry, zip);
+          if (result) {
+            const content = await zipEntry.async("arraybuffer");
+            zip.file(zipEntry.name, content);
+            needFetchFile = true;
+          }
+        }
+      }
+      return needFetchFile;
+    },
+    [],
+  );
+
+  const _processSingleFile = useCallback(
+    async (
+      file: File | JSZip.JSZipObject,
+      zip?: JSZip,
+    ): Promise<File | JSZip.JSZipObject | null> => {
+      const name = "name" in file ? file.name : (file as { name: string }).name;
+
+      try {
+        if (name.endsWith(".geojson")) {
+          const text =
+            "text" in file ? await file.text() : await file.async("text");
+          const geojson = JSON.parse(text);
+          geojson.fileName = name.replace(".geojson", "");
+          setGeometries((prev) => [...prev, geojson]);
+          return null;
+        } else if (name.endsWith(".kml")) {
+          const text =
+            "text" in file ? await file.text() : await file.async("text");
+          const xmlDoc = parseKmlToXmlDocument(text);
+          const geojson = parseKmlToGeoJson(xmlDoc);
+          geojson.fileName = name.replace(".kml", "");
+          setGeometries((prev) => [...prev, geojson]);
+          return null;
+        } else if (name.endsWith(".kmz") || name.endsWith(".zip")) {
+          const arrayBuffer =
+            "arrayBuffer" in file
+              ? await file.arrayBuffer()
+              : await file.async("arraybuffer");
+          const nestedZip = await JSZip.loadAsync(arrayBuffer);
+          if (zip) {
+            await processZipFile(nestedZip, zip, _processSingleFile);
+          } else {
+            await processZipFile(nestedZip, new JSZip(), _processSingleFile);
+          }
+          return null;
+        } else {
+          return file;
+        }
+      } catch (error) {
+        console.error("Erro ao processar arquivo:", name, error);
+        toast({
+          title: "Erro",
+          variant: "destructive",
+          description: `Erro ao processar o arquivo: ${name}`,
+        });
+        return null;
+      }
+    },
+    [processZipFile],
+  );
+
+  const fetchFile = useCallback(async (file: string | ShpJSBuffer) => {
+    try {
+      const geojson = await shp(file);
+      if (geojson) {
+        setGeometries((prev) =>
+          Array.isArray(geojson) ? [...prev, ...geojson] : [...prev, geojson],
+        );
+      }
+    } catch (_error) {
+      toast({
+        title: "Erro",
+        variant: "destructive",
+        description:
+          "Arquivo inválido ou não suportado, verifique a extensão dos arquivos.",
+      });
+    }
+  }, []);
+
+  const handleDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+    },
+    [],
+  );
+
+  const handleDrop = useCallback(
+    async (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setLoadingFile(true);
+      try {
+        const files = Array.from(event.dataTransfer.files);
+        const zip = new JSZip();
+        let needFetchFile = false;
+
+        for (const file of files) {
+          const result = await _processSingleFile(file, zip);
+          if (result) {
+            const arrayBuffer = await file.arrayBuffer();
+            zip.file(file.name, arrayBuffer);
+            needFetchFile = true;
+          }
+        }
+
+        if (needFetchFile) {
+          const zipBlob = await zip.generateAsync({ type: "blob" });
+          const buffer: ShpJSBuffer = await zipBlob.arrayBuffer();
+          await fetchFile(buffer);
+        }
+      } finally {
+        setLoadingFile(false);
+      }
+    },
+    [_processSingleFile, fetchFile],
+  );
+
+  return (
+    <SidebarProvider>
+      <AppSidebar
+        layer={{ activeLayer }}
+        wms_layers={{ wmsLayerManager, setWmsLayerManager }}
+      />
+      <SidebarTrigger />
+      {/** biome-ignore lint/a11y/noStaticElementInteractions: <explanation> */}
+      <div
+        className="w-full h-0 min-h-screen"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+      >
+        <GeometryController data_geometries={{ geometries, setGeometries }} />
+        <CallDynamicMap
+          base_layer_current={activeLayer}
+          wms_layers_current={wmsLayerManager}
+          geometries={geometries}
+        />
+        <LoadingFile active={loadingFile} />
+      </div>
+    </SidebarProvider>
   );
 }
