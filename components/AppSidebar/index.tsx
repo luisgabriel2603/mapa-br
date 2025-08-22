@@ -42,7 +42,7 @@ export function AppSidebar({ layer: { activeLayer }, wms_layers }: IAppSidebarPr
     return (
         <Sidebar className="border-r border-gray-200 bg-gradient-to-b from-slate-50 to-white">
             <SidebarHeader>
-                <div className=" mb-3 flex items-center justify-center h-20 bg-gradient-to-r from-slate-700 to-slate-800 text-white shadow-lg rounded-lg mx-1 mt-3 transition-all duration-300 hover:shadow-xl">
+                <div className=" mb-3 flex items-center justify-center h-20 bg-gradient-to-r from-slate-700 to-slate-800 text-white shadow-lg rounded-lg mx-6 mt-3 transition-all duration-300 hover:shadow-xl">
                     <div className="flex items-center space-x-3">
                         <div className="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 shadow-lg">
                             <MapPin className="w-6 h-6 text-white drop-shadow-sm" />
@@ -58,7 +58,7 @@ export function AppSidebar({ layer: { activeLayer }, wms_layers }: IAppSidebarPr
             </SidebarHeader>
 
             <SidebarContent className="px-3 py-1 border-t pb-4">
-                <Collapsible defaultOpen className="group/collapsible">
+                {/* <Collapsible defaultOpen className="group/collapsible">
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
                             <SidebarGroupLabel
@@ -85,12 +85,12 @@ export function AppSidebar({ layer: { activeLayer }, wms_layers }: IAppSidebarPr
                                             <span className="font-medium">Localização</span>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
-                                    {/*  <SidebarMenuItem>
+                                     <SidebarMenuItem>
                                 <SidebarMenuButton className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200">
                                     <FaSearch className="text-lg" />
                                     <span className="font-medium">Pesquisar</span>
                                 </SidebarMenuButton>
-                            </SidebarMenuItem> */}
+                            </SidebarMenuItem> 
                                     <SidebarMenuItem>
                                         <SidebarMenuButton className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200">
                                             <FaBookmark className="text-lg" />
@@ -102,7 +102,7 @@ export function AppSidebar({ layer: { activeLayer }, wms_layers }: IAppSidebarPr
                         </CollapsibleContent>
 
                     </SidebarGroup>
-                </Collapsible >
+                </Collapsible > */}
                 <Collapsible defaultOpen className="group/collapsible">
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
